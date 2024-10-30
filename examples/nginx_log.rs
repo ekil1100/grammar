@@ -29,14 +29,42 @@ fn parse_nginx_log(text: &str) -> Result<NginxLog, Error> {
     )?;
     let m = re.captures(text).ok_or(anyhow!("no match"))?;
     Ok(NginxLog {
-        ip: m.name("ip").unwrap().as_str().to_string(),
-        datetime: m.name("date").unwrap().as_str().to_string(),
-        method: m.name("method").unwrap().as_str().to_string(),
-        url: m.name("url").unwrap().as_str().to_string(),
-        protocol: m.name("proto").unwrap().as_str().to_string(),
-        status: m.name("status").unwrap().as_str().parse()?,
-        bytes: m.name("bytes").unwrap().as_str().parse()?,
-        referrer: m.name("referrer").unwrap().as_str().to_string(),
-        user_agent: m.name("ua").unwrap().as_str().to_string(),
+        ip: m.name("ip").ok_or(anyhow!("no ip"))?.as_str().to_string(),
+        datetime: m
+            .name("date")
+            .ok_or(anyhow!("no datetime"))?
+            .as_str()
+            .to_string(),
+        method: m
+            .name("method")
+            .ok_or(anyhow!("no method"))?
+            .as_str()
+            .to_string(),
+        url: m.name("url").ok_or(anyhow!("no url"))?.as_str().to_string(),
+        protocol: m
+            .name("proto")
+            .ok_or(anyhow!("no protocol"))?
+            .as_str()
+            .to_string(),
+        status: m
+            .name("status")
+            .ok_or(anyhow!("no status"))?
+            .as_str()
+            .parse()?,
+        bytes: m
+            .name("bytes")
+            .ok_or(anyhow!("no bytes"))?
+            .as_str()
+            .parse()?,
+        referrer: m
+            .name("referrer")
+            .ok_or(anyhow!("no referrer"))?
+            .as_str()
+            .to_string(),
+        user_agent: m
+            .name("ua")
+            .ok_or(anyhow!("no user agent"))?
+            .as_str()
+            .to_string(),
     })
 }
