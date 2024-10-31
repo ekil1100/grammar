@@ -8,4 +8,11 @@ license = "MIT"
 
 [dependencies]
 anyhow = "1.0.91"
+chrono = "0.4.38"
 regex = "1.11.1"
+url = "2.5.2"
+winnow = { version = "0.6.20", features = ["simd"] }
+
+[[example]]
+name = "nginx_log_next"
+test = true
