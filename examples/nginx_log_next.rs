@@ -2,7 +2,12 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use std::net::{IpAddr, Ipv4Addr};
 use url::Url;
-use winnow::{ascii::digit1, combinator::separated, PResult, Parser};
+use winnow::{
+    ascii::digit1,
+    combinator::{delimited, separated},
+    token::take_until,
+    PResult, Parser,
+};
 
 #[derive(Debug)]
 enum HttpProtocol {
@@ -49,7 +54,7 @@ fn parse_nginx_log(s: &str) -> PResult<NginxLog> {
     let input = &mut (&*s);
     Ok(NginxLog {
         ip: parse_ip(input)?,
-        datetime: Utc::now(),
+        datetime: parse_datetime(input)?,
         method: HttpMethod::Get,
         url: Url::parse("http://example.com").unwrap(),
         protocol: HttpProtocol::Http1_1,
@@ -66,19 +71,23 @@ fn parse_ip(s: &mut &str) -> PResult<IpAddr> {
     Ok(IpAddr::V4(Ipv4Addr::new(ip[0], ip[1], ip[2], ip[3])))
 }
 
-// fn parse_datetime(s: &str) -> Result<DateTime<Utc>, Error> {
+fn parse_datetime(s: &mut &str) -> PResult<DateTime<Utc>> {
+    take_until(0.., "[").parse_next(s)?;
+    let datetime = delimited("[", take_until(1.., "]"), "]").parse_next(s)?;
+    Ok(DateTime::parse_from_str(datetime, "%d/%b/%Y:%H:%M:%S %z")
+        .map_err(|_| winnow::error::ErrMode::Cut(winnow::error::ContextError::new()))?
+        .with_timezone(&Utc))
+}
+
+// fn parse_http_method(s: &str) -> PResult<HttpMethod> {
 //     todo!()
 // }
 
-// fn parse_http_method(s: &str) -> Result<HttpMethod, Error> {
+// fn parse_http_protocol(s: &str) -> PResult<HttpProtocol> {
 //     todo!()
 // }
 
-// fn parse_http_protocol(s: &str) -> Result<HttpProtocol, Error> {
-//     todo!()
-// }
-
-// fn parse_url(s: &str) -> Result<Url, Error> {
+// fn parse_url(s: &str) -> PResult<Url> {
 //     todo!()
 // }
 
@@ -98,5 +107,18 @@ mod tests {
 
         let mut invalid_range = "256.168.1.1";
         assert!(parse_ip(&mut invalid_range).is_err());
+    }
+
+    #[test]
+    fn test_parse_datetime() {
+        let mut input = "[17/May/2015:08:05:32 +0000]";
+        let result = parse_datetime(&mut input);
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            DateTime::parse_from_str("2015-05-17 08:05:32 +0000", "%Y-%m-%d %H:%M:%S %z")
+                .unwrap()
+                .with_timezone(&Utc)
+        );
     }
 }
